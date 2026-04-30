@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor Master: PDF/ZIP para JPEG</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --text: #1e293b;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            margin: 1.5rem 0;
+            transition: 0.3s;
+        }
+        .upload-area:hover { border-color: var(--primary); background: #eff6ff; }
+        #status { font-weight: bold; color: #64748b; margin-bottom: 1rem; }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            width: 100%;
+            max-width: 900px;
+            margin-top: 2rem;
+        }
+        .item { background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; }
+        .item img { width: 100%; border-radius: 4px; }
+        .btn-dl { 
+            display: block; 
+            margin-top: 5px; 
+            font-size: 12px; 
+            text-decoration: none; 
+            color: var(--primary); 
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Conversor Express</h1>
+        <p>Converta PDF ou ZIP para imagens (01, 02, 03...)</p>
+        
+        <div class="upload-area" onclick="document.getElementById('fInput').click()">
+            <input type="file" id="fInput" accept=".pdf,.zip" style="display:none">
+            <strong>Clique aqui para carregar</strong>
+        </div>
+        
+        <div id="status">Aguardando arquivo...</div>
+    </div>
+
+    <div class="gallery" id="gallery"></div>
+
+    <script>
+        // Configuração do motor do PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        const fInput = document.getElementById('fInput');
+        const status = document.getElementById('status');
+        const gallery = document.getElementById('gallery');
+        let contadorGeral = 1;
+
+        fInput.addEventListener('change', async (e) => {
+            const arquivo = e.target.files[0];
+            if (!arquivo) return;
+
+            gallery.innerHTML = '';
+            contadorGeral = 1;
+            status.innerText = "Processando...";
+
+            if (arquivo.name.toLowerCase().endsWith('.zip')) {
+                await tratarZip(arquivo);
+            } else {
+                await tratarPdf(arquivo);
+            }
+            status.innerText = "Concluído!";
+        });
+
+        async function tratarZip(file) {
+            const zip = await JSZip.loadAsync(file);
+            const nomesArquivos = Object.keys(zip.files).filter(n => n.toLowerCase().endsWith('.pdf'));
+
+            for (const nome of nomesArquivos) {
+                const data = await zip.files[nome].async("uint8array");
+                await tratarPdf(data, true);
+            }
+        }
+
+        async function tratarPdf(origem, ehBinario = false) {
+            const carregar = ehBinario ? pdfjsLib.getDocument({data: origem}) : pdfjsLib.getDocument({data: await origem.arrayBuffer()});
+            const pdf = await carregar.promise;
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const pagina = await pdf.getPage(i);
+                const visual = pagina.getViewport({ scale: 2.0 });
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.height = visual.height;
+                canvas.width = visual.width;
+
+                await pagina.render({ canvasContext: ctx, viewport: visual }).promise;
+
+                const nomeFinal = contadorGeral.toString().padStart(2, '0') + ".jpg";
+                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                
+                exibirNaTela(imgData, nomeFinal);
+                contadorGeral++;
+            }
+        }
+
+        function exibirNaTela(src, nome) {
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `
+                <img src="${src}">
+                <div style="font-size:12px; margin:5px 0;">${nome}</div>
+                <a href="${src}" download="${nome}" class="btn-dl">Baixar JPG</a>
+            `;
+            gallery.appendChild(div);
+        }
+    </script>
+</body>
+</html>
