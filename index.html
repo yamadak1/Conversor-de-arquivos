@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conversor Master: PDF/ZIP para JPEG</title>
+    <title>Conversor Master v3.0: PDF/ZIP/RAR para JPEG</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/unrar-js@0.2.4/dist/unrar.min.js"></script>
 
     <style>
         :root {
@@ -14,6 +15,7 @@
             --secondary: #4f46e5;
             --bg: #f8fafc;
             --text: #1e293b;
+            --rar-color: #8b5cf6;
         }
         body {
             font-family: 'Inter', -apple-system, sans-serif;
@@ -53,6 +55,8 @@
             margin-top: 1rem;
             font-weight: 600;
             color: #64748b;
+            padding: 10px;
+            border-radius: 5px;
         }
         .gallery {
             display: grid;
@@ -101,6 +105,7 @@
             top: 0;
             left: 0;
             transition: width 0.2s;
+            z-index: 1000;
         }
     </style>
 </head>
@@ -109,13 +114,13 @@
     <div id="progress-bar"></div>
 
     <div class="container">
-        <h1>Conversor Automático v2.0</h1>
-        <p>Arraste PDFs ou arquivos ZIP aqui</p>
+        <h1>Conversor Automático v3.0</h1>
+        <p>Suporta PDFs, ZIPs e <b>arquivos RAR</b></p>
         
         <div class="upload-box" id="drop-zone" onclick="document.getElementById('fileInput').click()">
-            <input type="file" id="fileInput" accept=".pdf,.zip" style="display:none">
-            <strong>Clique para selecionar arquivos</strong>
-            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 10px;">Suporta PDF e pastas compactadas (ZIP)</p>
+            <input type="file" id="fileInput" accept=".pdf,.zip,.rar" style="display:none">
+            <strong>Clique para selecionar o arquivo</strong>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 10px;">PDF, ZIP ou RAR (WinRAR)</p>
         </div>
         
         <div id="status">Aguardando comando...</div>
@@ -124,7 +129,6 @@
     <div class="gallery" id="gallery"></div>
 
     <script>
-        // Configurar Worker do PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         const fileInput = document.getElementById('fileInput');
@@ -138,44 +142,67 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            // Resetar estados
             gallery.innerHTML = '';
             globalSequence = 1;
             progressBar.style.width = '0%';
+            status.style.color = '#64748b';
             status.innerText = "Iniciando processamento...";
 
+            const fileName = file.name.toLowerCase();
+
             try {
-                if (file.name.toLowerCase().endsWith('.zip')) {
+                if (fileName.endsWith('.zip')) {
                     await processZip(file);
-                } else if (file.name.toLowerCase().endsWith('.pdf')) {
+                } else if (fileName.endsWith('.rar')) {
+                    await processRar(file);
+                } else if (fileName.endsWith('.pdf')) {
                     await processPdf(file);
                 }
                 status.innerText = `Sucesso! ${globalSequence - 1} imagens geradas.`;
                 progressBar.style.width = '100%';
             } catch (err) {
                 console.error(err);
-                status.innerText = "Erro ao processar arquivo.";
+                status.innerText = "Erro ao processar arquivo. Verifique se o formato é válido.";
+                status.style.color = "#ef4444";
             }
         });
 
+        // Processamento de ZIP
         async function processZip(zipFile) {
             status.innerText = "Extraindo arquivos do ZIP...";
             const zip = await JSZip.loadAsync(zipFile);
-            // Filtrar apenas arquivos PDF dentro do ZIP
             const pdfFiles = Object.keys(zip.files).filter(name => name.toLowerCase().endsWith('.pdf'));
             
-            if (pdfFiles.length === 0) {
-                status.innerText = "Nenhum PDF encontrado no ZIP.";
-                return;
-            }
+            if (pdfFiles.length === 0) throw new Error("Nenhum PDF no ZIP");
 
             for (let i = 0; i < pdfFiles.length; i++) {
                 const pdfData = await zip.files[pdfFiles[i]].async("uint8array");
-                status.innerText = `Processando PDF ${i+1} de ${pdfFiles.length}...`;
+                status.innerText = `Lendo PDF do ZIP (${i+1}/${pdfFiles.length})...`;
                 await processPdf(pdfData, true);
             }
         }
 
+        // Processamento de RAR (WinRAR)
+        async function processRar(rarFile) {
+            status.innerText = "Extraindo arquivos do RAR...";
+            const arrayBuffer = await rarFile.arrayBuffer();
+            const extractor = unrar.createExtractorFromData(new Uint8Array(arrayBuffer));
+            const list = extractor.getFileList();
+            
+            // Filtra nomes de arquivos que terminam com .pdf
+            const pdfFiles = list.fileHeaders.filter(header => header.name.toLowerCase().endsWith('.pdf'));
+
+            if (pdfFiles.length === 0) throw new Error("Nenhum PDF no RAR");
+
+            for (let i = 0; i < pdfFiles.length; i++) {
+                status.innerText = `Lendo PDF do RAR (${i+1}/${pdfFiles.length})...`;
+                const extracted = extractor.extractFiles([pdfFiles[i].name]);
+                const pdfData = extracted.files[0].extraction; // Conteúdo binário do PDF
+                await processPdf(pdfData, true);
+            }
+        }
+
+        // Conversão de PDF para JPEG
         async function processPdf(input, isRaw = false) {
             let loadingTask;
             if (isRaw) {
@@ -189,7 +216,7 @@
             
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 2.0 }); // Qualidade HD
+                const viewport = page.getViewport({ scale: 2.0 });
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 canvas.height = viewport.height;
@@ -197,14 +224,12 @@
 
                 await page.render({ canvasContext: context, viewport: viewport }).promise;
 
-                // Gerar nome 01, 02, 03...
                 const fileName = globalSequence.toString().padStart(2, '0') + ".jpg";
                 const imageData = canvas.toDataURL('image/jpeg', 0.9);
                 
                 renderCard(imageData, fileName);
                 globalSequence++;
                 
-                // Atualizar barra de progresso
                 let percent = (i / pdf.numPages) * 100;
                 progressBar.style.width = `${percent}%`;
             }
