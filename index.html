@@ -11,13 +11,15 @@
     <style>
         :root {
             --primary: #2563eb;
+            --secondary: #4f46e5;
             --bg: #f8fafc;
             --text: #1e293b;
         }
         body {
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Inter', -apple-system, sans-serif;
             background-color: var(--bg);
             color: var(--text);
+            margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -25,126 +27,198 @@
         }
         .container {
             background: white;
-            padding: 2rem;
+            padding: 2.5rem;
             border-radius: 1rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
             text-align: center;
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
+            border: 2px dashed #e2e8f0;
         }
-        .upload-area {
-            border: 2px dashed #cbd5e1;
-            padding: 2rem;
+        h1 { color: var(--primary); margin-top: 0; font-size: 1.8rem; }
+        .upload-box {
+            margin: 2rem 0;
+            padding: 2.5rem;
+            background: #f1f5f9;
             border-radius: 0.5rem;
             cursor: pointer;
-            margin: 1.5rem 0;
-            transition: 0.3s;
+            transition: all 0.3s ease;
+            border: 2px transparent solid;
         }
-        .upload-area:hover { border-color: var(--primary); background: #eff6ff; }
-        #status { font-weight: bold; color: #64748b; margin-bottom: 1rem; }
+        .upload-box:hover {
+            background: #e2e8f0;
+            border-color: var(--primary);
+        }
+        #status {
+            margin-top: 1rem;
+            font-weight: 600;
+            color: #64748b;
+        }
         .gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
             width: 100%;
-            max-width: 900px;
-            margin-top: 2rem;
+            max-width: 1100px;
         }
-        .item { background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; }
-        .item img { width: 100%; border-radius: 4px; }
-        .btn-dl { 
-            display: block; 
-            margin-top: 5px; 
-            font-size: 12px; 
-            text-decoration: none; 
-            color: var(--primary); 
+        .card {
+            background: white;
+            padding: 10px;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .card:hover { transform: translateY(-5px); }
+        .card img {
+            width: 100%;
+            height: auto;
+            border-radius: 0.25rem;
+        }
+        .filename {
+            font-size: 0.85rem;
+            margin: 8px 0;
             font-weight: bold;
+            color: #475569;
+        }
+        .download-link {
+            display: block;
+            text-decoration: none;
+            color: white;
+            background: var(--primary);
+            font-size: 0.8rem;
+            padding: 6px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .download-link:hover { background: var(--secondary); }
+        #progress-bar {
+            width: 0%;
+            height: 5px;
+            background: var(--primary);
+            position: fixed;
+            top: 0;
+            left: 0;
+            transition: width 0.2s;
         }
     </style>
 </head>
 <body>
 
+    <div id="progress-bar"></div>
+
     <div class="container">
-        <h1>Conversor Express</h1>
-        <p>Converta PDF ou ZIP para imagens (01, 02, 03...)</p>
+        <h1>Conversor Automático v2.0</h1>
+        <p>Arraste PDFs ou arquivos ZIP aqui</p>
         
-        <div class="upload-area" onclick="document.getElementById('fInput').click()">
-            <input type="file" id="fInput" accept=".pdf,.zip" style="display:none">
-            <strong>Clique aqui para carregar</strong>
+        <div class="upload-box" id="drop-zone" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept=".pdf,.zip" style="display:none">
+            <strong>Clique para selecionar arquivos</strong>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 10px;">Suporta PDF e pastas compactadas (ZIP)</p>
         </div>
         
-        <div id="status">Aguardando arquivo...</div>
+        <div id="status">Aguardando comando...</div>
     </div>
 
     <div class="gallery" id="gallery"></div>
 
     <script>
-        // Configuração do motor do PDF.js
+        // Configurar Worker do PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        const fInput = document.getElementById('fInput');
+        const fileInput = document.getElementById('fileInput');
         const status = document.getElementById('status');
         const gallery = document.getElementById('gallery');
-        let contadorGeral = 1;
+        const progressBar = document.getElementById('progress-bar');
 
-        fInput.addEventListener('change', async (e) => {
-            const arquivo = e.target.files[0];
-            if (!arquivo) return;
+        let globalSequence = 1;
 
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Resetar estados
             gallery.innerHTML = '';
-            contadorGeral = 1;
-            status.innerText = "Processando...";
+            globalSequence = 1;
+            progressBar.style.width = '0%';
+            status.innerText = "Iniciando processamento...";
 
-            if (arquivo.name.toLowerCase().endsWith('.zip')) {
-                await tratarZip(arquivo);
-            } else {
-                await tratarPdf(arquivo);
+            try {
+                if (file.name.toLowerCase().endsWith('.zip')) {
+                    await processZip(file);
+                } else if (file.name.toLowerCase().endsWith('.pdf')) {
+                    await processPdf(file);
+                }
+                status.innerText = `Sucesso! ${globalSequence - 1} imagens geradas.`;
+                progressBar.style.width = '100%';
+            } catch (err) {
+                console.error(err);
+                status.innerText = "Erro ao processar arquivo.";
             }
-            status.innerText = "Concluído!";
         });
 
-        async function tratarZip(file) {
-            const zip = await JSZip.loadAsync(file);
-            const nomesArquivos = Object.keys(zip.files).filter(n => n.toLowerCase().endsWith('.pdf'));
+        async function processZip(zipFile) {
+            status.innerText = "Extraindo arquivos do ZIP...";
+            const zip = await JSZip.loadAsync(zipFile);
+            // Filtrar apenas arquivos PDF dentro do ZIP
+            const pdfFiles = Object.keys(zip.files).filter(name => name.toLowerCase().endsWith('.pdf'));
+            
+            if (pdfFiles.length === 0) {
+                status.innerText = "Nenhum PDF encontrado no ZIP.";
+                return;
+            }
 
-            for (const nome of nomesArquivos) {
-                const data = await zip.files[nome].async("uint8array");
-                await tratarPdf(data, true);
+            for (let i = 0; i < pdfFiles.length; i++) {
+                const pdfData = await zip.files[pdfFiles[i]].async("uint8array");
+                status.innerText = `Processando PDF ${i+1} de ${pdfFiles.length}...`;
+                await processPdf(pdfData, true);
             }
         }
 
-        async function tratarPdf(origem, ehBinario = false) {
-            const carregar = ehBinario ? pdfjsLib.getDocument({data: origem}) : pdfjsLib.getDocument({data: await origem.arrayBuffer()});
-            const pdf = await carregar.promise;
+        async function processPdf(input, isRaw = false) {
+            let loadingTask;
+            if (isRaw) {
+                loadingTask = pdfjsLib.getDocument({data: input});
+            } else {
+                const arrayBuffer = await input.arrayBuffer();
+                loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
+            }
 
+            const pdf = await loadingTask.promise;
+            
             for (let i = 1; i <= pdf.numPages; i++) {
-                const pagina = await pdf.getPage(i);
-                const visual = pagina.getViewport({ scale: 2.0 });
+                const page = await pdf.getPage(i);
+                const viewport = page.getViewport({ scale: 2.0 }); // Qualidade HD
                 const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                canvas.height = visual.height;
-                canvas.width = visual.width;
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
 
-                await pagina.render({ canvasContext: ctx, viewport: visual }).promise;
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
 
-                const nomeFinal = contadorGeral.toString().padStart(2, '0') + ".jpg";
-                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                // Gerar nome 01, 02, 03...
+                const fileName = globalSequence.toString().padStart(2, '0') + ".jpg";
+                const imageData = canvas.toDataURL('image/jpeg', 0.9);
                 
-                exibirNaTela(imgData, nomeFinal);
-                contadorGeral++;
+                renderCard(imageData, fileName);
+                globalSequence++;
+                
+                // Atualizar barra de progresso
+                let percent = (i / pdf.numPages) * 100;
+                progressBar.style.width = `${percent}%`;
             }
         }
 
-        function exibirNaTela(src, nome) {
-            const div = document.createElement('div');
-            div.className = 'item';
-            div.innerHTML = `
+        function renderCard(src, name) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
                 <img src="${src}">
-                <div style="font-size:12px; margin:5px 0;">${nome}</div>
-                <a href="${src}" download="${nome}" class="btn-dl">Baixar JPG</a>
+                <div class="filename">${name}</div>
+                <a href="${src}" download="${name}" class="download-link">Baixar Imagem</a>
             `;
-            gallery.appendChild(div);
+            gallery.appendChild(card);
         }
     </script>
 </body>
