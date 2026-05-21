@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conversor Master v3.0: PDF/ZIP/RAR para JPEG</title>
+    <title>Conversor Master v4.0: PDF/ZIP/RAR para JPEG</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -13,99 +13,400 @@
         :root {
             --primary: #2563eb;
             --secondary: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
             --bg: #f8fafc;
             --text: #1e293b;
             --rar-color: #8b5cf6;
+            --border: #e2e8f0;
         }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background-color: var(--bg);
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, var(--bg) 0%, #f1f5f9 100%);
             color: var(--text);
             margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 2rem;
+            min-height: 100vh;
         }
+        
         .container {
             background: white;
             padding: 2.5rem;
-            border-radius: 1rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            border-radius: 1.2rem;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.08);
             text-align: center;
             max-width: 600px;
             width: 100%;
-            border: 2px dashed #e2e8f0;
+            border: 2px dashed var(--border);
         }
-        h1 { color: var(--primary); margin-top: 0; font-size: 1.8rem; }
+        
+        h1 {
+            color: var(--primary);
+            margin: 0 0 0.5rem 0;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        
         .upload-box {
             margin: 2rem 0;
-            padding: 2.5rem;
-            background: #f1f5f9;
-            border-radius: 0.5rem;
+            padding: 3rem 2.5rem;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e0e7ff 100%);
+            border-radius: 0.8rem;
             cursor: pointer;
             transition: all 0.3s ease;
-            border: 2px transparent solid;
+            border: 2px dashed var(--border);
+            position: relative;
+            overflow: hidden;
         }
+        
+        .upload-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+        
+        .upload-box:hover::before {
+            transform: translateX(100%);
+        }
+        
         .upload-box:hover {
-            background: #e2e8f0;
+            background: linear-gradient(135deg, #e0e7ff 0%, #dbeafe 100%);
             border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.1);
         }
+        
+        .upload-box:active {
+            transform: translateY(0);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .upload-box strong {
+            display: block;
+            font-size: 1.1rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+        
+        .upload-box p {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin: 0.5rem 0 0 0;
+        }
+        
         #status {
-            margin-top: 1rem;
+            margin-top: 1.5rem;
             font-weight: 600;
             color: #64748b;
-            padding: 10px;
-            border-radius: 5px;
+            padding: 12px 16px;
+            border-radius: 0.6rem;
+            min-height: 25px;
+            transition: all 0.3s ease;
+            background: #f0f9ff;
+            border-left: 4px solid var(--primary);
         }
+        
+        #status.success {
+            background: #ecfdf5;
+            color: var(--success);
+            border-left-color: var(--success);
+        }
+        
+        #status.error {
+            background: #fef2f2;
+            color: var(--error);
+            border-left-color: var(--error);
+        }
+        
+        #status.warning {
+            background: #fffbeb;
+            color: var(--warning);
+            border-left-color: var(--warning);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.6rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-clear {
+            background: #f1f5f9;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-clear:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+        
+        .btn-clear:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #progress-bar {
+            width: 0%;
+            height: 6px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            position: fixed;
+            top: 0;
+            left: 0;
+            transition: width 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+        
         .gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 1.5rem;
             margin-top: 3rem;
             width: 100%;
-            max-width: 1100px;
+            max-width: 1200px;
+            padding: 0 1rem;
+            animation: fadeIn 0.5s ease;
         }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
         .card {
             background: white;
-            padding: 10px;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 12px;
+            border-radius: 0.8rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
             text-align: center;
-            transition: transform 0.2s;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            animation: slideUp 0.4s ease;
         }
-        .card:hover { transform: translateY(-5px); }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+            border-color: var(--primary);
+        }
+        
+        .card-image-wrapper {
+            width: 100%;
+            height: 200px;
+            border-radius: 0.6rem;
+            overflow: hidden;
+            background: #f8fafc;
+            margin-bottom: 12px;
+        }
+        
         .card img {
             width: 100%;
-            height: auto;
-            border-radius: 0.25rem;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
         }
+        
+        .card:hover img {
+            transform: scale(1.05);
+        }
+        
         .filename {
             font-size: 0.85rem;
             margin: 8px 0;
-            font-weight: bold;
-            color: #475569;
+            font-weight: 700;
+            color: var(--text);
+            word-break: break-word;
         }
+        
+        .button-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 10px;
+        }
+        
         .download-link {
+            flex: 1;
             display: block;
             text-decoration: none;
             color: white;
             background: var(--primary);
             font-size: 0.8rem;
-            padding: 6px;
-            border-radius: 4px;
-            transition: background 0.2s;
+            padding: 8px;
+            border-radius: 0.4rem;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
-        .download-link:hover { background: var(--secondary); }
-        #progress-bar {
-            width: 0%;
-            height: 5px;
+        
+        .download-link:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+        }
+        
+        .copy-link {
+            flex: 1;
+            background: #f1f5f9;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        
+        .copy-link:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+        
+        .quality-control {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: #f0f9ff;
+            border-radius: 0.6rem;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .quality-control label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        #qualitySlider {
+            width: 150px;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        #qualitySlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
             background: var(--primary);
-            position: fixed;
-            top: 0;
-            left: 0;
-            transition: width 0.2s;
-            z-index: 1000;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+        }
+        
+        #qualitySlider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+        }
+        
+        #qualityValue {
+            font-weight: 700;
+            color: var(--primary);
+            min-width: 40px;
+        }
+        
+        .empty-state {
+            color: #64748b;
+            padding: 2rem;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+        
+        @media (max-width: 640px) {
+            .container {
+                padding: 1.5rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .upload-box {
+                padding: 2rem 1.5rem;
+            }
+            
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 1rem;
+            }
+            
+            .card-image-wrapper {
+                height: 150px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -114,90 +415,219 @@
     <div id="progress-bar"></div>
 
     <div class="container">
-        <h1>Conversor Automático v3.0</h1>
-        <p>Suporta PDFs, ZIPs e <b>arquivos RAR</b></p>
+        <h1>📸 Conversor Master v4.0</h1>
+        <p class="subtitle">Converta PDFs, ZIPs e RARs em imagens JPEG de alta qualidade</p>
         
-        <div class="upload-box" id="drop-zone" onclick="document.getElementById('fileInput').click()">
-            <input type="file" id="fileInput" accept=".pdf,.zip,.rar" style="display:none">
+        <div class="upload-box" id="drop-zone" tabindex="0" role="button" aria-label="Área para selecionar ou arrastar arquivo">
+            <input type="file" id="fileInput" accept=".pdf,.zip,.rar" style="display:none" aria-hidden="true">
+            <span class="upload-icon">📁</span>
             <strong>Clique para selecionar o arquivo</strong>
-            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 10px;">PDF, ZIP ou RAR (WinRAR)</p>
+            <p>ou arraste aqui</p>
+            <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 10px;">PDF, ZIP ou RAR (até 400MB)</p>
         </div>
         
-        <div id="status">Aguardando comando...</div>
+        <div class="quality-control">
+            <label for="qualitySlider">
+                Qualidade JPEG:
+                <input type="range" id="qualitySlider" min="70" max="100" value="90" aria-label="Qualidade de compressão JPEG">
+                <span id="qualityValue">90%</span>
+            </label>
+        </div>
+        
+        <div id="status" role="status" aria-live="polite">Aguardando arquivo...</div>
+        
+        <div class="button-group">
+            <button class="btn-clear" id="clearBtn" disabled>🗑️ Limpar Galeria</button>
+        </div>
     </div>
 
     <div class="gallery" id="gallery"></div>
 
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        // Configurações
+        const CONFIG = {
+            MAX_FILE_SIZE: 400 * 1024 * 1024, // 400MB
+            PROCESS_DELAY: 150, // ms entre páginas para não travar
+            DEFAULT_QUALITY: 0.9
+        };
 
+        // Elementos do DOM
         const fileInput = document.getElementById('fileInput');
         const status = document.getElementById('status');
         const gallery = document.getElementById('gallery');
         const progressBar = document.getElementById('progress-bar');
+        const dropZone = document.getElementById('drop-zone');
+        const clearBtn = document.getElementById('clearBtn');
+        const qualitySlider = document.getElementById('qualitySlider');
+        const qualityValue = document.getElementById('qualityValue');
 
         let globalSequence = 1;
+        let isProcessing = false;
 
-        fileInput.addEventListener('change', async (e) => {
+        // Configurar PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        // Atualizar exibição de qualidade
+        qualitySlider.addEventListener('input', (e) => {
+            qualityValue.textContent = e.target.value + '%';
+        });
+
+        // Event listeners para upload
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        // Drag and drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.background = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)';
+            dropZone.style.borderColor = 'var(--primary)';
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.background = 'linear-gradient(135deg, #f1f5f9 0%, #e0e7ff 100%)';
+            dropZone.style.borderColor = 'var(--border)';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.background = 'linear-gradient(135deg, #f1f5f9 0%, #e0e7ff 100%)';
+            dropZone.style.borderColor = 'var(--border)';
+            
+            fileInput.files = e.dataTransfer.files;
+            handleFileSelect({ target: fileInput });
+        });
+
+        // Click na área para abrir file dialog
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Enter/Space no drop zone
+        dropZone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInput.click();
+            }
+        });
+
+        // Botão limpar
+        clearBtn.addEventListener('click', () => {
+            gallery.innerHTML = '';
+            globalSequence = 1;
+            clearBtn.disabled = true;
+            setStatus('Galeria limpa', 'success');
+            setTimeout(() => setStatus('Aguardando arquivo...', 'default'), 2000);
+        });
+
+        // Função para mostrar status
+        function setStatus(message, type = 'default') {
+            status.textContent = message;
+            status.className = type !== 'default' ? type : '';
+        }
+
+        // Handler para seleção de arquivo
+        async function handleFileSelect(e) {
             const file = e.target.files[0];
             if (!file) return;
 
+            // Resetar
             gallery.innerHTML = '';
             globalSequence = 1;
+            isProcessing = true;
+            clearBtn.disabled = true;
             progressBar.style.width = '0%';
-            status.style.color = '#64748b';
-            status.innerText = "Iniciando processamento...";
-
-            const fileName = file.name.toLowerCase();
 
             try {
+                // Validar tamanho
+                if (file.size > CONFIG.MAX_FILE_SIZE) {
+                    throw new Error(`Arquivo muito grande. Máximo: 100MB. Tamanho: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+                }
+
+                const fileName = file.name.toLowerCase();
+                setStatus(`Iniciando processamento de ${file.name}...`);
+
                 if (fileName.endsWith('.zip')) {
                     await processZip(file);
                 } else if (fileName.endsWith('.rar')) {
                     await processRar(file);
                 } else if (fileName.endsWith('.pdf')) {
                     await processPdf(file);
+                } else {
+                    throw new Error('Formato não suportado. Use PDF, ZIP ou RAR.');
                 }
-                status.innerText = `Sucesso! ${globalSequence - 1} imagens geradas.`;
+
                 progressBar.style.width = '100%';
+                const count = globalSequence - 1;
+                setStatus(`✓ Sucesso! ${count} imagem${count !== 1 ? 's' : ''} gerada${count !== 1 ? 's' : ''}.`, 'success');
+                clearBtn.disabled = false;
+
             } catch (err) {
                 console.error(err);
-                status.innerText = "Erro ao processar arquivo. Verifique se o formato é válido.";
-                status.style.color = "#ef4444";
+                handleError(err);
+            } finally {
+                isProcessing = false;
             }
-        });
+        }
 
-        // Processamento de ZIP
+        // Tratamento detalhado de erros
+        function handleError(err) {
+            let message = 'Erro ao processar arquivo.';
+
+            if (err.message.includes('muito grande')) {
+                message = err.message;
+            } else if (err.message.includes('Nenhum PDF')) {
+                message = 'O arquivo não contém PDFs válidos.';
+            } else if (err.message.includes('corrompido') || err.message.includes('corrupted')) {
+                message = 'O arquivo pode estar corrompido.';
+            } else if (err.message.includes('Formato não suportado')) {
+                message = 'Formato não suportado. Use PDF, ZIP ou RAR.';
+            } else if (err.message.includes('memory')) {
+                message = 'Memória insuficiente. Tente com um arquivo menor.';
+            } else {
+                message = `Erro: ${err.message}`;
+            }
+
+            setStatus(message, 'error');
+            progressBar.style.width = '0%';
+        }
+
+        // Processamento ZIP
         async function processZip(zipFile) {
-            status.innerText = "Extraindo arquivos do ZIP...";
+            setStatus('Extraindo arquivos do ZIP...');
             const zip = await JSZip.loadAsync(zipFile);
-            const pdfFiles = Object.keys(zip.files).filter(name => name.toLowerCase().endsWith('.pdf'));
+            const pdfFiles = Object.keys(zip.files).filter(name => 
+                name.toLowerCase().endsWith('.pdf') && !name.startsWith('__MACOSX')
+            );
             
-            if (pdfFiles.length === 0) throw new Error("Nenhum PDF no ZIP");
+            if (pdfFiles.length === 0) {
+                throw new Error('Nenhum PDF encontrado no ZIP');
+            }
 
             for (let i = 0; i < pdfFiles.length; i++) {
                 const pdfData = await zip.files[pdfFiles[i]].async("uint8array");
-                status.innerText = `Lendo PDF do ZIP (${i+1}/${pdfFiles.length})...`;
+                setStatus(`Processando PDF ${i+1}/${pdfFiles.length}...`);
                 await processPdf(pdfData, true);
             }
         }
 
-        // Processamento de RAR (WinRAR)
+        // Processamento RAR
         async function processRar(rarFile) {
-            status.innerText = "Extraindo arquivos do RAR...";
+            setStatus('Extraindo arquivos do RAR...');
             const arrayBuffer = await rarFile.arrayBuffer();
             const extractor = unrar.createExtractorFromData(new Uint8Array(arrayBuffer));
             const list = extractor.getFileList();
             
-            // Filtra nomes de arquivos que terminam com .pdf
-            const pdfFiles = list.fileHeaders.filter(header => header.name.toLowerCase().endsWith('.pdf'));
+            const pdfFiles = list.fileHeaders.filter(header => 
+                header.name.toLowerCase().endsWith('.pdf')
+            );
 
-            if (pdfFiles.length === 0) throw new Error("Nenhum PDF no RAR");
+            if (pdfFiles.length === 0) {
+                throw new Error('Nenhum PDF encontrado no RAR');
+            }
 
             for (let i = 0; i < pdfFiles.length; i++) {
-                status.innerText = `Lendo PDF do RAR (${i+1}/${pdfFiles.length})...`;
+                setStatus(`Processando PDF ${i+1}/${pdfFiles.length}...`);
                 const extracted = extractor.extractFiles([pdfFiles[i].name]);
-                const pdfData = extracted.files[0].extraction; // Conteúdo binário do PDF
+                const pdfData = extracted.files[0].extraction;
                 await processPdf(pdfData, true);
             }
         }
@@ -205,45 +635,154 @@
         // Conversão de PDF para JPEG
         async function processPdf(input, isRaw = false) {
             let loadingTask;
-            if (isRaw) {
-                loadingTask = pdfjsLib.getDocument({data: input});
-            } else {
-                const arrayBuffer = await input.arrayBuffer();
-                loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
-            }
-
-            const pdf = await loadingTask.promise;
             
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 2.0 });
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
+            try {
+                if (isRaw) {
+                    loadingTask = pdfjsLib.getDocument({data: input});
+                } else {
+                    const arrayBuffer = await input.arrayBuffer();
+                    loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
+                }
 
-                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                const pdf = await loadingTask.promise;
+                const quality = parseFloat(qualitySlider.value) / 100;
+                
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 2.0 });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
 
-                const fileName = globalSequence.toString().padStart(2, '0') + ".jpg";
-                const imageData = canvas.toDataURL('image/jpeg', 0.9);
-                
-                renderCard(imageData, fileName);
-                globalSequence++;
-                
-                let percent = (i / pdf.numPages) * 100;
-                progressBar.style.width = `${percent}%`;
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+                    // Converter canvas para blob JPEG real
+                    const blob = await canvasToBlob(canvas, quality);
+                    const fileName = globalSequence.toString().padStart(3, '0') + '.jpg';
+                    
+                    renderCard(blob, fileName);
+                    globalSequence++;
+                    
+                    // Atualizar barra de progresso
+                    let percent = (i / pdf.numPages) * 100;
+                    progressBar.style.width = `${percent}%`;
+                    
+                    // Delay para não sobrecarregar
+                    if (i < pdf.numPages) {
+                        await delay(CONFIG.PROCESS_DELAY);
+                    }
+                }
+            } catch (err) {
+                throw new Error(`Erro ao processar PDF: ${err.message}`);
             }
         }
 
-        function renderCard(src, name) {
+        // Converter canvas para Blob JPEG
+        function canvasToBlob(canvas, quality) {
+            return new Promise((resolve, reject) => {
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob) {
+                            resolve(blob);
+                        } else {
+                            reject(new Error('Falha ao converter canvas para blob'));
+                        }
+                    },
+                    'image/jpeg',
+                    quality
+                );
+            });
+        }
+
+        // Função para renderizar card
+        function renderCard(blob, name) {
+            const objectUrl = URL.createObjectURL(blob);
+            
             const card = document.createElement('div');
             card.className = 'card';
+            
+            // Sanitizar nome do arquivo
+            const safeName = document.createElement('div');
+            safeName.textContent = name;
+            
             card.innerHTML = `
-                <img src="${src}">
-                <div class="filename">${name}</div>
-                <a href="${src}" download="${name}" class="download-link">Baixar Imagem</a>
+                <div class="card-image-wrapper">
+                    <img src="${objectUrl}" alt="Página ${name}">
+                </div>
+                <div class="filename"></div>
+                <div class="button-container">
+                    <button class="download-link" aria-label="Baixar ${name}">⬇️ Baixar</button>
+                    <button class="copy-link" aria-label="Copiar URL de ${name}">🔗 URL</button>
+                </div>
             `;
+            
+            // Adicionar nome sanitizado
+            card.querySelector('.filename').appendChild(safeName);
+            
+            // Event listener para download
+            card.querySelector('.download-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                downloadBlob(blob, name);
+            });
+            
+            // Event listener para copiar URL
+            card.querySelector('.copy-link').addEventListener('click', () => {
+                navigator.clipboard.writeText(objectUrl).then(() => {
+                    setStatus('URL copiada para a área de transferência!', 'success');
+                    setTimeout(() => setStatus(''), 2000);
+                }).catch(() => {
+                    setStatus('Erro ao copiar URL', 'error');
+                });
+            });
+            
             gallery.appendChild(card);
+        }
+
+        // Função para baixar blob como arquivo - com múltiplas estratégias
+        function downloadBlob(blob, filename) {
+            try {
+                // Verificar se o blob é válido
+                if (!blob || !(blob instanceof Blob)) {
+                    throw new Error('Blob inválido');
+                }
+
+                // Estratégia 1: Link com blob URL (mais compatível)
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                link.style.display = 'none';
+                link.type = 'application/octet-stream';
+                
+                // Adicionar ao DOM e disparar clique
+                document.body.appendChild(link);
+                
+                // Usar setTimeout para garantir que o navegador processe
+                setTimeout(() => {
+                    link.click();
+                    
+                    // Limpar após delay
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                }, 10);
+                
+                setStatus(`✓ Baixando ${filename}...`, 'success');
+                setTimeout(() => setStatus(''), 2000);
+                
+            } catch (err) {
+                console.error('Erro no download:', err);
+                setStatus('❌ Erro ao fazer download. Tente novamente.', 'error');
+            }
+        }
+
+        // Utility: delay
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
         }
     </script>
 </body>
